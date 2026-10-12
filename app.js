@@ -41,7 +41,7 @@ async function loadCatalog(){
   const [s,b]=await Promise.all([sb.from('services').select('*').eq('active',true).order('name'),sb.from('barbers').select('*').eq('active',true).order('name')]);
   if(s.error){ setResult('Erro ao carregar serviços: '+s.error.message,false); return; }
   if(b.error){ setResult('Erro ao carregar barbeiros: '+b.error.message,false); return; }
-  services=s.data||[]; barbers=b.data||[]; renderCatalog();
+  services=s.data||[]; barbers=(b.data||[]).filter(b=>String(b.name||'').trim().toUpperCase()==='WELIGOL'); renderCatalog();
 }
 
 function renderCatalog(){
