@@ -5,6 +5,7 @@
 <title>Black Hands — Admin</title><link rel="stylesheet" href="styles.css">
 <style>
 .admin-nav{display:flex;gap:8px;flex-wrap:wrap;margin:25px 0}.admin-nav button{background:#151515;border:1px solid #303030;color:#ddd;padding:11px 15px;cursor:pointer;border-radius:3px}.admin-nav button.active{background:var(--orange);color:#080808;border-color:var(--orange);font-weight:800}.admin-panel{display:none}.admin-panel.active{display:block}.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.metric-grid .dash-card strong{font-size:45px}.filters{display:flex;gap:10px;flex-wrap:wrap;margin:15px 0}.filters input,.filters select,.settings-grid input,.settings-grid textarea{background:#171717;border:1px solid #303030;color:#fff;padding:13px;border-radius:3px;font:inherit}.filters button{cursor:pointer}.table-wrap{overflow:auto}.admin-table{width:100%;border-collapse:collapse;background:#111}.admin-table th,.admin-table td{padding:13px;border-bottom:1px solid #252525;text-align:left;font-size:13px;white-space:nowrap}.admin-table th{color:var(--orange);font-size:11px;letter-spacing:1px}.admin-table button{background:transparent;border:1px solid #444;color:#ddd;padding:7px 10px;cursor:pointer}.form-card{background:#111;border:1px solid var(--line);padding:22px;margin-top:18px}.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.settings-grid label{display:flex;flex-direction:column;gap:7px;color:#999;font-size:12px}.settings-grid .full{grid-column:1/-1}.positive{color:#8fda8f}.negative{color:#ff8f8f}.wa{color:#8bd7a0;text-decoration:none}@media(max-width:900px){.metric-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.metric-grid,.settings-grid{grid-template-columns:1fr}.settings-grid .full{grid-column:auto}}
+.login-gate{min-height:70vh;display:flex;align-items:center;justify-content:center;padding:40px 20px}.login-card{width:min(430px,100%);background:#111;border:1px solid var(--line);padding:28px}.login-card h1{margin:0 0 8px}.login-card p{color:#999}.login-card input{width:100%;box-sizing:border-box;background:#171717;border:1px solid #303030;color:#fff;padding:14px;margin:7px 0 12px;font:inherit}.login-card button{width:100%;margin-top:8px}.login-error{color:#ff8f8f;min-height:20px;margin-top:12px}
 </style>
 </head>
 <body class="dashboard-page">
@@ -13,7 +14,7 @@
 <button class="btn btn-small" id="logout">SAIR</button>
 </header>
 
-<main class="dashboard section">
+<section id="loginGate" class="login-gate"><div class="login-card"><p class="eyebrow">BLACK HANDS ADMIN</p><h1>Entrar no painel</h1><p>Use o e-mail e a senha da sua conta cadastrada no site.</p><form id="adminLoginForm"><label>E-mail</label><input id="loginEmail" type="email" autocomplete="email" placeholder="seu@email.com" required><label>Senha</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Sua senha" required><button class="btn" type="submit">ENTRAR</button><div id="loginError" class="login-error"></div></form></div></section><main id="adminMain" class="dashboard section" style="display:none">
 <div class="section-head"><div><p class="eyebrow">BLACK HANDS ADMIN</p><h1 class="dash-title">Gestão.</h1></div><p>Painel conectado ao mesmo Supabase do site. Tudo que entra pelo agendamento aparece aqui.</p></div>
 
 <nav class="admin-nav">
@@ -91,10 +92,14 @@ async function init(){
  if(!window.SUPABASE_URL?.startsWith('http')) return;
  sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
  const {data:{user}}=await sb.auth.getUser();
- if(!user){location.href='index.html#authPanel';return}
- const {data:p}=await sb.from('profiles').select('role').eq('id',user.id).single();
- if(p?.role!=='admin'){document.body.innerHTML='<main class="section"><h1>Acesso restrito</h1><p>Somente o administrador pode acessar este painel.</p><a class="btn" href="index.html">VOLTAR</a></main>';return}
- await loadAll();
+ if(!user){document.getElementById('loginGate').style.display='flex';return}
+ await openAdmin(user);
+}
+async function openAdmin(user){
+ const {data:p,error}=await sb.from('profiles').select('role').eq('id',user.id).single();
+ if(error){document.getElementById('loginError').textContent='Erro ao verificar administrador: '+error.message;return}
+ if(p?.role!=='admin'){await sb.auth.signOut();document.getElementById('loginGate').style.display='flex';document.getElementById('loginError').textContent='Esta conta não tem acesso de administrador.';return}
+ document.getElementById('loginGate').style.display='none';document.getElementById('adminMain').style.display='block';await loadAll();
 }
 async function loadAll(){
  const [c,b,s,a,f,cl]=await Promise.all([
@@ -146,7 +151,11 @@ document.getElementById('addFinance').onclick=async()=>{const amount=Number(docu
 document.getElementById('addClub').onclick=async()=>{const client_id=document.getElementById('clubClient').value,plan=document.getElementById('clubPlan').value,due=document.getElementById('clubDue').value;if(!client_id||!due)return alert('Selecione cliente e vencimento.');const price=plan==='combo_01'?70:160;const {error}=await sb.from('club_subscriptions').insert({client_id,plan,monthly_price:price,start_date:today(),due_date:due,status:'active'});if(error)alert(error.message);else await loadAll()};
 async function loadSettings(){const {data,error}=await sb.from('site_settings').select('*').eq('id',1).single();if(error||!data)return;document.getElementById('setBrand').value=data.brand_name||'';document.getElementById('setWhatsapp').value=data.whatsapp||'';document.getElementById('setInstagram').value=data.instagram||'';document.getElementById('setAddress').value=data.address||'';document.getElementById('setHours').value=data.opening_hours||'';document.getElementById('setPrimary').value=data.primary_color||'';document.getElementById('setSecondary').value=data.secondary_color||'';document.getElementById('setHeroTitle').value=data.hero_title||'';document.getElementById('setHeroText').value=data.hero_text||''}
 document.getElementById('saveSettings').onclick=async()=>{const row={id:1,brand_name:document.getElementById('setBrand').value,whatsapp:document.getElementById('setWhatsapp').value,instagram:document.getElementById('setInstagram').value,address:document.getElementById('setAddress').value,opening_hours:document.getElementById('setHours').value,primary_color:document.getElementById('setPrimary').value,secondary_color:document.getElementById('setSecondary').value,hero_title:document.getElementById('setHeroTitle').value,hero_text:document.getElementById('setHeroText').value,updated_at:new Date().toISOString()};const {error}=await sb.from('site_settings').upsert(row);document.getElementById('settingsMsg').textContent=error?'Erro: '+error.message:'Personalização salva.';};
-document.getElementById('logout').onclick=async()=>{await sb?.auth.signOut();location.href='index.html'};
-init().then(loadSettings);
+document.getElementById('adminLoginForm').addEventListener('submit',async(e)=>{
+ e.preventDefault();const email=document.getElementById('loginEmail').value.trim();const password=document.getElementById('loginPassword').value;const msg=document.getElementById('loginError');msg.textContent='Entrando...';
+ const {data,error}=await sb.auth.signInWithPassword({email,password});if(error){msg.textContent='E-mail ou senha inválidos.';return}await openAdmin(data.user);if(document.getElementById('adminMain').style.display==='block') await loadSettings();
+});
+document.getElementById('logout').onclick=async()=>{await sb?.auth.signOut();document.getElementById('adminMain').style.display='none';document.getElementById('loginGate').style.display='flex';document.getElementById('loginPassword').value='';};
+init();
 </script>
 </body></html>
