@@ -43,19 +43,19 @@ async function api(req,res,url) {
       let value, description, reference;
       if (kind === 'club') {
         const plan = body.plan === 'combo_02' ? 'combo_02' : body.plan === 'combo_01' ? 'combo_01' : '';
-        if (!plan || !email || !name) return send(res,400,{error:'Informe nome, e-mail e combo.'});
+        if (!plan || !email || !name || ![11,14].includes(cpfCnpj.length)) return send(res,400,{error:'Informe nome, e-mail, CPF/CNPJ válido e combo.'});
         value = plan === 'combo_01' ? 70 : 160;
         description = 'Black Hands Club - '+(plan==='combo_01'?'Combo 01':'Combo 02')+' - primeiro mês';
         reference = 'bhclub-'+plan+'-'+Date.now();
       } else {
         const allowed = {'Cabelo':35,'Barba':30,'Pintura':15,'Relaxamento':15,'Pigmentação':15,'Pezinho':10,'Sobrancelha':10};
         const chosen = Array.isArray(body.services) ? [...new Set(body.services.map(x=>String(x)))] : [];
-        if (!email || !name || !chosen.length || chosen.some(x=>!(x in allowed))) return send(res,400,{error:'Informe nome, e-mail e serviços válidos.'});
+        if (!email || !name || ![11,14].includes(cpfCnpj.length) || !chosen.length || chosen.some(x=>!(x in allowed))) return send(res,400,{error:'Informe nome, e-mail, CPF/CNPJ válido e serviços válidos.'});
         value = chosen.reduce((sum,x)=>sum+allowed[x],0);
         description = 'Black Hands - '+chosen.join(' + ');
         reference = 'bhbooking-'+Date.now();
       }
-      const customerBody = {name,email,notificationDisabled:true,externalReference:'blackhands-'+Date.now()};
+      const customerBody = {name,email,cpfCnpj,notificationDisabled:true,externalReference:'blackhands-'+Date.now()};
       if (phone.length >= 10) customerBody.mobilePhone = phone;
       const customer = await asaas('/customers','POST',customerBody);
       const today = new Date();
