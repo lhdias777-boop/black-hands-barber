@@ -95,47 +95,27 @@
       </div>
     </section>
 
-    <section id="authPanel" class="section auth-section">
-      <div class="section-head"><div><p class="eyebrow">ÁREA DO CLIENTE</p><h2 id="authTitle">Entrar na conta.</h2></div><p>Crie sua conta uma única vez. Depois, para agendar, basta escolher serviço, barbeiro, data e horário.</p></div>
-      <div id="authBox"></div>
-      <form id="authForm" class="auth-form">
-        <input type="hidden" id="authMode" value="login">
-        <label id="authNameWrap" hidden>Nome completo<input id="authName" type="text" placeholder="Seu nome"></label>
-        <label id="authPhoneWrap" hidden>WhatsApp<input id="authPhone" type="tel" placeholder="(31) 99999-9999"></label>
-        <label>E-mail<input id="authEmail" type="email" placeholder="voce@email.com" required></label>
-        <label>Senha<input id="authPassword" type="password" minlength="6" placeholder="Mínimo 6 caracteres" required></label>
-        <button class="btn" id="authSubmit" type="submit">ENTRAR</button>
-        <button class="btn btn-ghost" id="authToggle" type="button">Ainda não tenho conta</button>
-        <p id="authMessage" class="auth-message"></p>
-      </form>
-    </section>
-
     <section id="agendar" class="booking section-dark">
       <div class="section-head">
         <div><p class="eyebrow">AGENDAMENTO ONLINE</p><h2>Reserve seu horário.</h2></div>
-        <p>Escolha serviço, barbeiro, data e horário. Os horários ocupados ficam bloqueados e o banco impede reservas duplicadas.</p>
+        <p>Escolha um ou mais serviços, data e horário. Seus dados ficam salvos neste dispositivo para o próximo agendamento.</p>
       </div>
       <form id="bookingForm" class="booking-form">
         <fieldset class="service-picker"><legend>Serviços <small>(selecione um ou mais)</small></legend><div id="serviceOptions" class="service-options"></div><strong id="selectedServicesTotal">Total: R$ 0,00</strong></fieldset>
         <label>Barbeiro<select id="barber" required><option value="">Selecione</option><option>Primeiro barbeiro disponível</option></select></label>
         <label>Data<input id="date" type="date" required></label>
         <label>Horário<select id="time" required><option value="">Selecione uma data primeiro</option></select></label>
-        <div class="logged-user-note">Seus dados de cliente vêm da conta conectada.</div>
+        <label>Nome completo<input id="bookingName" type="text" autocomplete="name" placeholder="Seu nome" required></label><label>Número de WhatsApp<input id="bookingPhone" type="tel" autocomplete="tel" placeholder="(31) 99999-9999" required></label>
         <div class="payment-box">
           <strong>Forma de pagamento</strong>
           <div class="payment-options">
-            <label><input type="radio" name="payment" value="online" checked> Pagar agora</label>
-            <label><input type="radio" name="payment" value="shop"> Pagar na barbearia</label>
+            <label><input type="radio" name="payment" value="online" checked> Pagar Pix agora</label>
+            <label><input type="radio" name="payment" value="shop"> Pagar em dinheiro no dia</label>
           </div>
         </div>
         <button class="btn full" type="submit">CONFIRMAR AGENDAMENTO</button>
       </form>
       <div id="bookingResult" class="result" hidden></div>
-    </section>
-
-    <section id="meus-agendamentos" class="section">
-      <div class="section-head"><div><p class="eyebrow">MINHA CONTA</p><h2>Meus agendamentos.</h2></div><p>Veja seus horários confirmados e o barbeiro responsável pelo atendimento.</p></div>
-      <div id="myBookings" class="my-bookings"><p>Entre na sua conta para visualizar seus agendamentos.</p></div>
     </section>
 
     <section id="club" class="section club">
