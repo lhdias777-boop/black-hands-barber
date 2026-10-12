@@ -116,11 +116,7 @@
         <p>Escolha serviço, barbeiro, data e horário. Os horários ocupados ficam bloqueados e o banco impede reservas duplicadas.</p>
       </div>
       <form id="bookingForm" class="booking-form">
-        <label>Serviço<select id="service" required>
-          <option value="">Selecione</option>
-          <option>Cabelo — R$ 35,00</option><option>Barba — R$ 30,00</option><option>Pintura — R$ 15,00</option>
-          <option>Relaxamento — R$ 15,00</option><option>Pigmentação — R$ 15,00</option><option>Pezinho — R$ 10,00</option><option>Sobrancelha — R$ 10,00</option>
-        </select></label>
+        <fieldset class="service-picker"><legend>Serviços <small>(selecione um ou mais)</small></legend><div id="serviceOptions" class="service-options"></div><strong id="selectedServicesTotal">Total: R$ 0,00</strong></fieldset>
         <label>Barbeiro<select id="barber" required><option value="">Selecione</option><option>Primeiro barbeiro disponível</option></select></label>
         <label>Data<input id="date" type="date" required></label>
         <label>Horário<select id="time" required><option value="">Selecione uma data primeiro</option></select></label>
