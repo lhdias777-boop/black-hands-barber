@@ -89,7 +89,24 @@ async function selectService(name){
 }
 window.selectService=selectService;
 
-async function getUser(){ if(!sb) return null; const {data}=await sb.auth.getUser(); return data.user; }
+async function getUser(){ return null; }
+function getClientData(){
+  const saved=JSON.parse(localStorage.getItem('blackhands_client')||'null');
+  return {name:document.getElementById('bookingName')?.value.trim()||saved?.name||'',phone:document.getElementById('bookingPhone')?.value.trim()||saved?.phone||''};
+}
+function saveClientData(name,phone){
+  localStorage.setItem('blackhands_client',JSON.stringify({name,phone}));
+}
+function openBookingWhatsApp(url){
+  if(url) window.open(url,'_blank','noopener');
+}
+function restoreClientData(){
+  try{
+    const saved=JSON.parse(localStorage.getItem('blackhands_client')||'null');
+    if(saved?.name) document.getElementById('bookingName').value=saved.name;
+    if(saved?.phone) document.getElementById('bookingPhone').value=saved.phone;
+  }catch{}
+}
 
 async function updateAuthUI(){
   if(!sb) return;
@@ -135,12 +152,9 @@ function preparePixPayment(kind, extra={}){
   panel.scrollIntoView({behavior:'smooth',block:'center'});
 }
 async function createPixPayment(kind, extra={}){
-  const user=await getUser();
-  if(!user) throw new Error('Entre na sua conta antes de continuar.');
-  const {data:profile}=await sb.from('profiles').select('full_name,phone').eq('id',user.id).maybeSingle();
-  const name=profile?.full_name||user.user_metadata?.full_name||user.email?.split('@')[0]||'Cliente Black Hands';
-  const phone=profile?.phone||user.user_metadata?.phone||'';
-  const response=await fetch('/api/payments/pix',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,plan:extra.plan,services:extra.services,email:user.email,name,phone,cpfCnpj:document.getElementById('paymentCpf').value})});
+  const client=getClientData();
+  if(!client.name || !client.phone) throw new Error('Preencha nome e WhatsApp antes de continuar.');
+  const response=await fetch('/api/payments/pix',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,plan:extra.plan,services:extra.services,email:'',name:client.name,phone:client.phone,cpfCnpj:document.getElementById('paymentCpf').value})});
   const data=await response.json();
   if(!response.ok) throw new Error(data.error||'Não foi possível gerar o Pix.');
   currentPaymentId=data.paymentId;currentPaymentKind=kind;
@@ -156,40 +170,38 @@ async function createPixPayment(kind, extra={}){
   document.getElementById('clubPixLabel').style.display=data.payload?'block':'none';
   document.getElementById('copyClubPix').style.display=data.payload?'inline-block':'none';
   document.getElementById('checkClubPayment').style.display='inline-block';
-  document.getElementById('clubPaymentNote').textContent=kind==='club'?'Esta cobrança paga o primeiro mês do combo. A renovação automática ainda não está ativada.':'Após a confirmação do pagamento, o site concluirá o agendamento.';
+  document.getElementById('clubPaymentNote').textContent=kind==='club'?'Esta cobrança paga o primeiro mês do combo. A renovação automática ainda não está ativada.':'Após a confirmação do pagamento, o agendamento será salvo e enviado para o WhatsApp da barbearia.';
   return data;
 }
 async function saveBookingAppointments(booking,paymentMethod){
-  const {data:occupied,error:occError}=await sb.from('appointments').select('appointment_time').eq('barber_id',booking.barberId).eq('appointment_date',booking.date).neq('status','cancelled');
-  if(occError) throw new Error('Não consegui conferir os horários: '+occError.message);
-  const booked=new Set((occupied||[]).map(x=>String(x.appointment_time).slice(0,5)));
-  const start=times.indexOf(booking.time);
-  const slots=booking.chosen.map((s,i)=>times[start+i]);
-  if(start<0||slots.some(t=>!t)||slots.some(t=>booked.has(t))) throw new Error('Não há horários consecutivos suficientes para todos os serviços. Escolha outro horário ou reduza os serviços.');
-  for(let i=0;i<booking.chosen.length;i++){
-    const {error}=await sb.from('appointments').insert({client_id:booking.userId,service_id:booking.chosen[i].id,barber_id:booking.barberId,appointment_date:booking.date,appointment_time:slots[i],payment_method:paymentMethod,status:'confirmed'});
-    if(error) throw new Error('Não foi possível salvar todos os serviços: '+error.message);
-  }
-  await loadMyBookings();
+  const response=await fetch('/api/bookings',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:booking.name,phone:booking.phone,serviceIds:booking.chosen.map(s=>s.id),barberId:booking.barberId,date:booking.date,time:booking.time,paymentMethod})});
+  const data=await response.json();
+  if(!response.ok) throw new Error(data.error||'Não foi possível salvar o agendamento.');
+  saveClientData(booking.name,booking.phone);
+  return data;
 }
 document.getElementById("bookingForm").addEventListener("submit",async e=>{
   e.preventDefault();
-  const user=await getUser();
   if(!sb){setResult('<strong>Supabase ainda não configurado.</strong>',false);return;}
-  if(!user){setResult('<strong>Entre ou crie sua conta antes de agendar.</strong>',false);document.getElementById('authPanel').scrollIntoView({behavior:'smooth'});return;}
+  const client=getClientData();
   const chosen=selectedServices(), barberId=barberSelect.value, date=dateInput.value, time=timeSelect.value;
   const payment=document.querySelector('input[name="payment"]:checked')?.value||'shop';
-  if(!chosen.length||!barberId||!date||!time){setResult('Selecione um ou mais serviços, barbeiro, data e horário.',false);return;}
+  if(!client.name||!client.phone||!chosen.length||!barberId||!date||!time){setResult('Preencha nome, WhatsApp, um ou mais serviços, data e horário.',false);return;}
   const start=times.indexOf(time);
   if(start<0||start+chosen.length>times.length){setResult('Não há horários suficientes depois desse horário para todos os serviços. Escolha um horário anterior.',false);return;}
-  const booking={userId:user.id,chosen,barberId,date,time};
+  const booking={name:client.name,phone:client.phone,chosen,barberId,date,time};
+  saveClientData(client.name,client.phone);
   if(payment==='online'){
     pendingBooking=booking;preparePixPayment('booking',{services:chosen.map(s=>s.name)});
-    setResult('Preencha o CPF/CNPJ no painel de pagamento para gerar o QR Code Pix. O agendamento só será salvo após confirmação.',true);
+    setResult('Preencha o CPF/CNPJ para gerar o QR Code Pix. O agendamento será salvo após a confirmação.',true);
     return;
   }
-  try{await saveBookingAppointments(booking,'shop');setResult('<strong>✓ Agendamento confirmado!</strong><br>'+chosen.map((s,i)=>esc(s.name)+' — '+esc(slotsLabel(time,i))).join('<br>')+'<br><br>Pagamento na barbearia.');e.target.reset();updateSelectedServicesTotal();timeSelect.innerHTML='<option value="">Selecione barbeiro e data</option>';}
-  catch(error){setResult('<strong>Não foi possível concluir:</strong><br>'+error.message,false);await loadAvailableTimes();}
+  try{
+    const data=await saveBookingAppointments(booking,'shop');
+    setResult('<strong>✓ Agendamento confirmado!</strong><br>'+chosen.map((s,i)=>esc(s.name)+' — '+esc(slotsLabel(time,i))).join('<br>')+'<br><br>Pagamento em dinheiro no dia.');
+    openBookingWhatsApp(data.whatsappUrl);
+    e.target.reset();restoreClientData();updateSelectedServicesTotal();timeSelect.innerHTML='<option value="">Selecione barbeiro e data</option>';
+  }catch(error){setResult('<strong>Não foi possível concluir:</strong><br>'+error.message,false);await loadAvailableTimes();}
 });
 function slotsLabel(startTime,offset){const i=times.indexOf(startTime);return times[i+offset]||startTime;}
 
@@ -253,9 +265,10 @@ document.getElementById('checkClubPayment').onclick=async()=>{
   const data=await response.json();if(!response.ok)throw new Error(data.error||'Falha ao consultar pagamento.');
   if(!data.paid){document.getElementById('clubPaymentStatus').textContent='Pagamento ainda não confirmado (status: '+data.status+'). Tente novamente em instantes.';return;}
   if(currentPaymentKind==='booking'&&pendingBooking){
-    await saveBookingAppointments(pendingBooking,'online');pendingBooking=null;
+    const bookingData=await saveBookingAppointments(pendingBooking,'online');pendingBooking=null;
     document.getElementById('clubPaymentStatus').textContent='Pagamento confirmado e agendamento salvo!';
-    setResult('<strong>✓ Pix confirmado!</strong><br>Seus serviços foram agendados. Confira em “Meus agendamentos”.');
+    setResult('<strong>✓ Pix confirmado!</strong><br>Seus serviços foram agendados e enviados para o WhatsApp da barbearia.');
+    openBookingWhatsApp(bookingData.whatsappUrl);
     document.getElementById('bookingForm').reset();updateSelectedServicesTotal();timeSelect.innerHTML='<option value="">Selecione barbeiro e data</option>';
   }else{
     document.getElementById('clubPaymentStatus').textContent='Pagamento do primeiro mês confirmado. A equipe precisa validar e ativar o combo no painel administrativo.';
@@ -275,3 +288,4 @@ track.addEventListener('pointerup',()=>{if(!dragging)return;dragging=false;track
 track.addEventListener('pointercancel',()=>{dragging=false;track.classList.remove('dragging');showSlide(currentSlide);restartAuto()});
 
 initSupabase();
+restoreClientData();
