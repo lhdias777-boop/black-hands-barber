@@ -143,6 +143,11 @@ values
 ('Sobrancelha','Acabamento da sobrancelha.',10,15)
 on conflict (name) do update set description=excluded.description, price=excluded.price, duration_minutes=excluded.duration_minutes;
 
+-- Barbeiro disponível para agendamento.
+insert into public.barbers (name, active)
+select 'WELIGOL', true
+where not exists (select 1 from public.barbers where upper(trim(name)) = 'WELIGOL');
+
 -- Exemplo para criar barbeiros depois de criar os usuários:
 -- insert into public.barbers (user_id, name) values ('UUID_DO_USUARIO', 'Nome do Barbeiro');
 
