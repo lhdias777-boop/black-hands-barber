@@ -153,13 +153,22 @@
         <article class="plan">
           <small>COMBO 01</small><h3>Corte + Acabamento</h3>
           <p>2 cortes + 2 acabamentos por mês.</p>
-          <strong>R$ 70,00 / mês</strong><button>Ver combo</button>
+          <strong>R$ 70,00 / mês</strong><button type="button" id="buyCombo01">ASSINAR COMBO 01</button>
         </article>
         <article class="plan featured">
           <small>COMBO 02</small><h3>Corte + Barba + Sobrancelhas</h3>
           <p>2 cortes + barba + sobrancelhas + 2 acabamentos por mês.</p>
-          <strong>R$ 160,00 / mês</strong><button>Ver combo</button>
+          <strong>R$ 160,00 / mês</strong><button type="button" id="buyCombo02">ASSINAR COMBO 02</button>
         </article>
+      </div>
+      <div id="clubPayment" class="form-card" hidden>
+        <h3 id="clubPaymentTitle">Pagamento Pix</h3>
+        <p id="clubPaymentStatus">Gerando cobrança segura...</p>
+        <img id="clubQrImage" alt="QR Code Pix para pagamento" style="display:none;max-width:260px;width:100%;background:#fff;padding:12px;border-radius:8px">
+        <label id="clubPixLabel" style="display:none">Pix copia e cola<textarea id="clubPixPayload" rows="4" readonly style="width:100%;margin-top:8px"></textarea></label>
+        <button type="button" id="copyClubPix" class="btn btn-small" style="display:none">COPIAR PIX</button>
+        <button type="button" id="checkClubPayment" class="btn btn-ghost btn-small" style="display:none">JÁ PAGUEI — VERIFICAR</button>
+        <p id="clubPaymentNote">Pagamento de teste no ambiente Sandbox; não use como cobrança real.</p>
       </div>
     </section>
 
