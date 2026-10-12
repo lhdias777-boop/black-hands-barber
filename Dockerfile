@@ -1,6 +1,6 @@
-FROM nginx:alpine
-
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY . /usr/share/nginx/html
-
+FROM node:20-alpine
+WORKDIR /app
+COPY . .
+ENV NODE_ENV=production
 EXPOSE 10000
+CMD ["node", "server.js"]
