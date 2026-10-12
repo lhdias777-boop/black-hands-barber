@@ -153,3 +153,76 @@ where not exists (select 1 from public.barbers where upper(trim(name)) = 'WELIGO
 
 -- Para transformar sua conta em ADMIN, primeiro crie a conta normalmente e depois:
 -- update public.profiles set role = 'admin' where id = 'UUID_DA_SUA_CONTA';
+
+
+-- =========================================
+-- ADMIN: FINANCEIRO, CLUB E PERSONALIZAÇÃO
+-- =========================================
+
+create table if not exists public.financial_transactions (
+  id uuid primary key default gen_random_uuid(),
+  type text not null check (type in ('income','expense')),
+  description text not null,
+  amount numeric(10,2) not null check (amount >= 0),
+  payment_method text not null default 'shop',
+  transaction_date date not null default current_date,
+  appointment_id uuid references public.appointments(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists financial_transactions_date_idx on public.financial_transactions(transaction_date);
+
+create table if not exists public.club_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid not null references public.profiles(id) on delete cascade,
+  plan text not null check (plan in ('combo_01','combo_02')),
+  monthly_price numeric(10,2) not null check (monthly_price >= 0),
+  start_date date not null default current_date,
+  due_date date not null,
+  status text not null default 'active' check (status in ('active','paused','cancelled','expired')),
+  uses_corte integer not null default 0,
+  uses_barba integer not null default 0,
+  uses_sobrancelha integer not null default 0,
+  uses_acabamento integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists club_subscriptions_client_idx on public.club_subscriptions(client_id);
+create index if not exists club_subscriptions_due_idx on public.club_subscriptions(due_date);
+
+create table if not exists public.site_settings (
+  id integer primary key default 1 check (id = 1),
+  brand_name text not null default 'BLACK HANDS',
+  whatsapp text,
+  instagram text,
+  address text,
+  opening_hours text,
+  primary_color text not null default '#f47b20',
+  secondary_color text not null default '#080808',
+  hero_title text,
+  hero_text text,
+  updated_at timestamptz not null default now()
+);
+
+insert into public.site_settings (id, brand_name, hero_title, hero_text)
+values (1, 'BLACK HANDS', 'Seu estilo, sua assinatura.', 'Corte, barba e cuidado com identidade.')
+on conflict (id) do nothing;
+
+alter table public.financial_transactions enable row level security;
+alter table public.club_subscriptions enable row level security;
+alter table public.site_settings enable row level security;
+
+drop policy if exists financial_admin_all on public.financial_transactions;
+create policy financial_admin_all on public.financial_transactions for all to authenticated
+using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists club_admin_all on public.club_subscriptions;
+create policy club_admin_all on public.club_subscriptions for all to authenticated
+using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists site_settings_public_read on public.site_settings;
+create policy site_settings_public_read on public.site_settings for select to anon, authenticated using (true);
+
+drop policy if exists site_settings_admin_update on public.site_settings;
+create policy site_settings_admin_update on public.site_settings for all to authenticated
+using (public.is_admin()) with check (public.is_admin());
