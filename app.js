@@ -4,7 +4,7 @@ const timeSelect = document.getElementById("time");
 const serviceOptions = document.getElementById("serviceOptions");
 let pendingBooking = null;
 let currentPaymentId = null;
-let currentPaymentKind = null;
+let currentPaymentKind = null;\nlet queuedPayment = null;
 const barberSelect = document.getElementById("barber");
 const result = document.getElementById("bookingResult");
 const authBox = document.getElementById("authBox");
@@ -121,16 +121,16 @@ async function loadMyBookings(){
   box.innerHTML=data?.length?data.map(a=>`<article class="booking-item"><strong>${a.services?.name||'Serviço'}</strong><span>${a.appointment_date} às ${String(a.appointment_time).slice(0,5)} • ${a.barbers?.name||''}</span><em>${a.status}</em></article>`).join(''):'<p>Você ainda não possui agendamentos.</p>';
 }
 
-async function createPixPayment(kind, extra={}){
+function preparePixPayment(kind, extra={}){\n  queuedPayment={kind,extra};\n  const panel=document.getElementById('clubPayment');panel.hidden=false;\n  document.getElementById('cpfPaymentForm').style.display='flex';\n  document.getElementById('clubQrImage').style.display='none';\n  document.getElementById('clubPixLabel').style.display='none';\n  document.getElementById('copyClubPix').style.display='none';\n  document.getElementById('checkClubPayment').style.display='none';\n  document.getElementById('clubPaymentTitle').textContent='Dados para gerar o Pix';\n  document.getElementById('clubPaymentStatus').textContent='Informe o CPF/CNPJ do pagador para criar a cobrança no Asaas.';\n  panel.scrollIntoView({behavior:'smooth',block:'center'});\n}\nasync function createPixPayment(kind, extra={}){
   const user=await getUser();
   if(!user) throw new Error('Entre na sua conta antes de continuar.');
   const {data:profile}=await sb.from('profiles').select('full_name,phone').eq('id',user.id).maybeSingle();
   const name=profile?.full_name||user.user_metadata?.full_name||user.email?.split('@')[0]||'Cliente Black Hands';
   const phone=profile?.phone||user.user_metadata?.phone||'';
-  const response=await fetch('/api/payments/pix',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,plan:extra.plan,services:extra.services,email:user.email,name,phone})});
+  const response=await fetch('/api/payments/pix',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,plan:extra.plan,services:extra.services,email:user.email,name,phone,cpfCnpj:document.getElementById('paymentCpf').value})});
   const data=await response.json();
   if(!response.ok) throw new Error(data.error||'Não foi possível gerar o Pix.');
-  currentPaymentId=data.paymentId;currentPaymentKind=kind;
+  currentPaymentId=data.paymentId;currentPaymentKind=kind;\n  document.getElementById('cpfPaymentForm').style.display='none';
   document.getElementById('clubPayment').hidden=false;
   document.getElementById('clubPayment').scrollIntoView({behavior:'smooth',block:'center'});
   document.getElementById('clubPaymentTitle').textContent=kind==='club'?'Pix do Black Hands Club':'Pix do agendamento';
@@ -170,8 +170,8 @@ document.getElementById("bookingForm").addEventListener("submit",async e=>{
   if(start<0||start+chosen.length>times.length){setResult('Não há horários suficientes depois desse horário para todos os serviços. Escolha um horário anterior.',false);return;}
   const booking={userId:user.id,chosen,barberId,date,time};
   if(payment==='online'){
-    try{pendingBooking=booking;await createPixPayment('booking',{services:chosen.map(s=>s.name)});setResult('Leia o QR Code Pix e depois toque em “Já paguei — verificar”. O agendamento só será salvo após confirmação.',true);}
-    catch(error){pendingBooking=null;setResult('<strong>Erro no pagamento:</strong><br>'+error.message,false);}
+    pendingBooking=booking;preparePixPayment('booking',{services:chosen.map(s=>s.name)});
+    setResult('Preencha o CPF/CNPJ no painel de pagamento para gerar o QR Code Pix. O agendamento só será salvo após confirmação.',true);
     return;
   }
   try{await saveBookingAppointments(booking,'shop');setResult('<strong>✓ Agendamento confirmado!</strong><br>'+chosen.map((s,i)=>esc(s.name)+' — '+esc(slotsLabel(time,i))).join('<br>')+'<br><br>Pagamento na barbearia.');e.target.reset();updateSelectedServicesTotal();timeSelect.innerHTML='<option value="">Selecione barbeiro e data</option>';}
@@ -211,12 +211,23 @@ if(authForm) authForm.addEventListener('submit',async e=>{
 const modeToggle=document.getElementById('authToggle');
 if(modeToggle) modeToggle.onclick=()=>{const m=document.getElementById('authMode');m.value=m.value==='login'?'signup':'login';document.getElementById('authTitle').textContent=m.value==='login'?'Entrar na conta':'Criar minha conta';document.getElementById('authSubmit').textContent=m.value==='login'?'ENTRAR':'CRIAR CONTA';document.getElementById('authNameWrap').hidden=m.value==='login';document.getElementById('authPhoneWrap').hidden=m.value==='login';modeToggle.textContent=m.value==='login'?'Ainda não tenho conta':'Já tenho conta';};
 
+document.getElementById('cpfPaymentForm').addEventListener('submit',async(e)=>{
+ e.preventDefault();
+ if(!queuedPayment)return;
+ const cpf=document.getElementById('paymentCpf').value.replace(/\\D/g,'');
+ if(![11,14].includes(cpf.length)){document.getElementById('clubPaymentStatus').textContent='Digite um CPF ou CNPJ com quantidade correta de números.';return;}
+ const submit=e.submitter; if(submit)submit.disabled=true;
+ document.getElementById('clubPaymentStatus').textContent='Gerando cobrança no Asaas...';
+ try{await createPixPayment(queuedPayment.kind,queuedPayment.extra);}
+ catch(error){document.getElementById('clubPaymentStatus').textContent='Erro ao gerar Pix: '+error.message;}
+ finally{if(submit)submit.disabled=false;}
+});
 document.getElementById('buyCombo01').addEventListener('click',()=>buyClub('combo_01'));
 document.getElementById('buyCombo02').addEventListener('click',()=>buyClub('combo_02'));
 async function buyClub(plan){
   const user=await getUser();
   if(!user){setResult('<strong>Entre na sua conta para assinar o Club.</strong>',false);document.getElementById('authPanel').style.display='';document.getElementById('authPanel').scrollIntoView({behavior:'smooth'});return;}
-  try{await createPixPayment('club',{plan});}
+  try{preparePixPayment('club',{plan});}
   catch(error){document.getElementById('clubPayment').hidden=false;document.getElementById('clubPaymentStatus').textContent='Erro: '+error.message;document.getElementById('clubPayment').scrollIntoView({behavior:'smooth'});}
 }
 document.getElementById('copyClubPix').onclick=async()=>{try{await navigator.clipboard.writeText(document.getElementById('clubPixPayload').value);document.getElementById('clubPaymentStatus').textContent='Código Pix copiado. Valor: '+document.getElementById('clubPaymentStatus').textContent.split('Valor: ')[1];}catch{document.getElementById('clubPaymentStatus').textContent='Selecione e copie o código Pix manualmente.';}};
