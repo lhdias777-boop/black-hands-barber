@@ -1,10 +1,14 @@
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 
 const ROOT = __dirname;
 const PORT = Number(process.env.PORT || 10000);
 const ASAAS_BASE_URL = (process.env.ASAAS_BASE_URL || 'https://api-sandbox.asaas.com/v3').replace(/\/$/, '');
+const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const WHATSAPP_NUMBER = '5531971245200';
 const MIME = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.svg':'image/svg+xml','.ico':'image/x-icon'};
 
 function send(res, status, data) {
@@ -15,6 +19,47 @@ async function readBody(req) {
   let raw = '';
   for await (const chunk of req) { raw += chunk; if (raw.length > 100000) throw new Error('Requisição muito grande.'); }
   return raw ? JSON.parse(raw) : {};
+}
+async function supabaseRequest(pathname, method='GET', body) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) throw new Error('Supabase do servidor não configurado. Adicione SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no Render.');
+  const response = await fetch(SUPABASE_URL + pathname, {
+    method,
+    headers: {'apikey':SUPABASE_SERVICE_ROLE_KEY,'Authorization':'Bearer '+SUPABASE_SERVICE_ROLE_KEY,'content-type':'application/json','Prefer':'return=representation'},
+    ...(body ? {body:JSON.stringify(body)} : {})
+  });
+  const data = await response.json().catch(()=>({}));
+  if (!response.ok) {
+    const err = new Error(data.message || data.error_description || data.hint || 'Erro no Supabase.');
+    err.status=response.status; throw err;
+  }
+  return data;
+}
+async function getOrCreateGuestProfile(name, phone) {
+  const digits=String(phone||'').replace(/\D/g,'').slice(-13);
+  if (digits.length < 10) throw new Error('Informe um WhatsApp válido.');
+  const existing=await supabaseRequest('/rest/v1/profiles?phone=eq.'+encodeURIComponent(digits)+'&select=id,full_name,phone&limit=1');
+  if (Array.isArray(existing) && existing[0]) return existing[0];
+  const guestEmail='guest.'+digits+'@blackhands.local';
+  const password=crypto.randomBytes(24).toString('hex');
+  const user=await supabaseRequest('/auth/v1/admin/users','POST',{email:guestEmail,password,email_confirm:true,user_metadata:{full_name:name,phone:digits}});
+  const id=user.id || user.user?.id;
+  if (!id) throw new Error('Não foi possível criar o cadastro do cliente.');
+  const profile=await supabaseRequest('/rest/v1/profiles?id=eq.'+encodeURIComponent(id)+'&select=id,full_name,phone&limit=1');
+  return Array.isArray(profile) && profile[0] ? profile[0] : {id,full_name:name,phone:digits};
+}
+function whatsappBookingUrl(name,phone,booking) {
+  const lines=[
+    'Olá, Black Hands! Quero confirmar meu agendamento.',
+    'Nome: '+name,
+    'WhatsApp: '+phone,
+    'Data: '+booking.date,
+    'Horário: '+booking.time,
+    'Barbeiro: '+booking.barberName,
+    'Serviços: '+booking.services.join(' + '),
+    'Total: R$ '+booking.total.toFixed(2).replace('.',','),
+    'Pagamento: '+(booking.paymentMethod==='online'?'Pix':'Dinheiro no dia')
+  ];
+  return 'https://wa.me/'+WHATSAPP_NUMBER+'?text='+encodeURIComponent(lines.join('\n'));
 }
 async function asaas(pathname, method='GET', body) {
   const key = process.env.ASAAS_API_KEY;
@@ -33,6 +78,47 @@ async function asaas(pathname, method='GET', body) {
 }
 async function api(req,res,url) {
   if (req.method === 'GET' && url.pathname === '/api/health') return send(res,200,{ok:true});
+  if (req.method === 'POST' && url.pathname === '/api/bookings') {
+    try {
+      const body=await readBody(req);
+      const name=String(body.name||'').trim().slice(0,120);
+      const phone=String(body.phone||'').replace(/\D/g,'').slice(0,13);
+      const barberId=String(body.barberId||'');
+      const date=String(body.date||'');
+      const time=String(body.time||'').slice(0,5);
+      const paymentMethod=body.paymentMethod==='online'?'online':'shop';
+      const serviceIds=Array.isArray(body.serviceIds)?[...new Set(body.serviceIds.map(String))]:[];
+      if(!name || phone.length<10 || !barberId || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time) || !serviceIds.length) return send(res,400,{error:'Preencha nome, WhatsApp, serviços, data e horário.'});
+      const barberRows=await supabaseRequest('/rest/v1/barbers?id=eq.'+encodeURIComponent(barberId)+'&active=eq.true&select=id,name&limit=1');
+      if(!barberRows[0]) return send(res,400,{error:'Barbeiro indisponível.'});
+      const serviceRows=await supabaseRequest('/rest/v1/services?id=in.('+serviceIds.map(encodeURIComponent).join(',')+')&active=eq.true&select=id,name,price,duration_minutes');
+      if(serviceRows.length!==serviceIds.length) return send(res,400,{error:'Um dos serviços não está disponível.'});
+      const ordered=serviceIds.map(id=>serviceRows.find(s=>s.id===id)).filter(Boolean);
+      const existing=await supabaseRequest('/rest/v1/appointments?barber_id=eq.'+encodeURIComponent(barberId)+'&appointment_date=eq.'+encodeURIComponent(date)+'&status=neq.cancelled&select=appointment_time');
+      const booked=new Set((existing||[]).map(x=>String(x.appointment_time).slice(0,5)));
+      const slots=['08:00','08:30','09:00','09:30','10:00','10:30','11:00','11:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30','18:00','18:30'];
+      const start=slots.indexOf(time);
+      const chosenSlots=ordered.map((_,i)=>slots[start+i]);
+      if(start<0 || chosenSlots.some(t=>!t) || chosenSlots.some(t=>booked.has(t))) return send(res,409,{error:'Esse horário não comporta todos os serviços escolhidos. Escolha outro horário.'});
+      const profile=await getOrCreateGuestProfile(name,phone);
+      const inserted=[];
+      try {
+        for(let i=0;i<ordered.length;i++){
+          const rows=await supabaseRequest('/rest/v1/appointments','POST',[{client_id:profile.id,service_id:ordered[i].id,barber_id:barberId,appointment_date:date,appointment_time:chosenSlots[i],payment_method:paymentMethod,status:'confirmed'}]);
+          if(!rows[0]?.id) throw new Error('Falha ao salvar o agendamento.');
+          inserted.push(rows[0].id);
+        }
+      } catch(error) {
+        if(inserted.length) await supabaseRequest('/rest/v1/appointments?id=in.('+inserted.map(encodeURIComponent).join(',')+')','DELETE').catch(()=>{});
+        throw error;
+      }
+      const total=ordered.reduce((sum,s)=>sum+Number(s.price||0),0);
+      const wa=whatsappBookingUrl(name,phone,{date,time,barberName:barberRows[0].name,services:ordered.map(s=>s.name),total,paymentMethod});
+      return send(res,200,{ok:true,ids:inserted,total,whatsappUrl:wa,slots:chosenSlots});
+    } catch(error) {
+      return send(res,error.status && error.status<500?400:500,{error:error.message||'Não foi possível criar o agendamento.'});
+    }
+  }
   if (req.method === 'POST' && url.pathname === '/api/payments/pix') {
     try {
       const body = await readBody(req);
