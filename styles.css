@@ -46,3 +46,5 @@
 #clubPayment textarea{box-sizing:border-box;background:#171717;border:1px solid #303030;color:#fff;padding:12px;font:inherit}
 #clubPaymentNote{color:#aaa;font-size:13px}
 @media(max-width:600px){.service-options{grid-template-columns:1fr}.service-check{padding:10px}}
+
+.booking-hidden{display:none}
