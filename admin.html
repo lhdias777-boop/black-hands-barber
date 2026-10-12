@@ -1,17 +1,152 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Black Hands — Admin</title><link rel="stylesheet" href="styles.css"></head>
-<body class="dashboard-page"><header class="topbar"><a class="brand" href="index.html"><span class="brand-mark">BH</span><span><strong>BLACK HANDS</strong><small>ADMIN</small></span></a><button class="btn btn-small" id="logout">SAIR</button></header>
-<main class="dashboard section"><div class="section-head"><div><p class="eyebrow">PAINEL ADMINISTRATIVO</p><h1 class="dash-title">Visão geral.</h1></div><p>Clientes, barbeiros e agenda central da Black Hands.</p></div>
-<div class="dash-grid"><article class="dash-card"><small>CLIENTES</small><strong id="clients">0</strong><span>cadastrados</span></article><article class="dash-card"><small>BARBEIROS</small><strong id="barbers">0</strong><span>ativos</span></article><article class="dash-card"><small>AGENDAMENTOS</small><strong id="bookings">0</strong><span>futuros</span></article></div>
-<section><h2 class="dash-subtitle">Agenda geral</h2><div id="agenda" class="booking-list"></div></section>
-<section><h2 class="dash-subtitle">Clientes cadastrados</h2><div id="clientList" class="booking-list"></div></section>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Black Hands — Admin</title><link rel="stylesheet" href="styles.css">
+<style>
+.admin-nav{display:flex;gap:8px;flex-wrap:wrap;margin:25px 0}.admin-nav button{background:#151515;border:1px solid #303030;color:#ddd;padding:11px 15px;cursor:pointer;border-radius:3px}.admin-nav button.active{background:var(--orange);color:#080808;border-color:var(--orange);font-weight:800}.admin-panel{display:none}.admin-panel.active{display:block}.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.metric-grid .dash-card strong{font-size:45px}.filters{display:flex;gap:10px;flex-wrap:wrap;margin:15px 0}.filters input,.filters select,.settings-grid input,.settings-grid textarea{background:#171717;border:1px solid #303030;color:#fff;padding:13px;border-radius:3px;font:inherit}.filters button{cursor:pointer}.table-wrap{overflow:auto}.admin-table{width:100%;border-collapse:collapse;background:#111}.admin-table th,.admin-table td{padding:13px;border-bottom:1px solid #252525;text-align:left;font-size:13px;white-space:nowrap}.admin-table th{color:var(--orange);font-size:11px;letter-spacing:1px}.admin-table button{background:transparent;border:1px solid #444;color:#ddd;padding:7px 10px;cursor:pointer}.form-card{background:#111;border:1px solid var(--line);padding:22px;margin-top:18px}.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.settings-grid label{display:flex;flex-direction:column;gap:7px;color:#999;font-size:12px}.settings-grid .full{grid-column:1/-1}.positive{color:#8fda8f}.negative{color:#ff8f8f}.wa{color:#8bd7a0;text-decoration:none}@media(max-width:900px){.metric-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.metric-grid,.settings-grid{grid-template-columns:1fr}.settings-grid .full{grid-column:auto}}
+</style>
+</head>
+<body class="dashboard-page">
+<header class="topbar">
+<a class="brand" href="index.html"><span class="brand-mark">BH</span><span><strong>BLACK HANDS</strong><small>ADMIN</small></span></a>
+<button class="btn btn-small" id="logout">SAIR</button>
+</header>
+
+<main class="dashboard section">
+<div class="section-head"><div><p class="eyebrow">BLACK HANDS ADMIN</p><h1 class="dash-title">Gestão.</h1></div><p>Painel conectado ao mesmo Supabase do site. Tudo que entra pelo agendamento aparece aqui.</p></div>
+
+<nav class="admin-nav">
+<button class="active" data-tab="dashboard">📊 Dashboard</button>
+<button data-tab="agenda">📅 Agenda</button>
+<button data-tab="clients">👥 Clientes</button>
+<button data-tab="finance">💰 Financeiro</button>
+<button data-tab="club">🖤 Club</button>
+<button data-tab="barbers">💈 Barbeiros</button>
+<button data-tab="services">✂️ Serviços</button>
+<button data-tab="reports">📈 Relatórios</button>
+<button data-tab="settings">🎨 Personalização</button>
+</nav>
+
+<section id="dashboard" class="admin-panel active">
+<div class="metric-grid">
+<article class="dash-card"><small>FATURAMENTO</small><strong id="mRevenue">R$ 0</strong><span>agendamentos concluídos</span></article>
+<article class="dash-card"><small>AGENDAMENTOS</small><strong id="mBookings">0</strong><span>futuros</span></article>
+<article class="dash-card"><small>CLIENTES</small><strong id="mClients">0</strong><span>cadastrados</span></article>
+<article class="dash-card"><small>TICKET MÉDIO</small><strong id="mTicket">R$ 0</strong><span>por atendimento</span></article>
+</div>
+<h2 class="dash-subtitle">Próximos atendimentos</h2><div id="dashAgenda" class="booking-list"></div>
+</section>
+
+<section id="agenda" class="admin-panel">
+<h2 class="dash-subtitle">Agenda geral</h2>
+<div class="filters"><input type="date" id="agendaDate"><select id="agendaStatus"><option value="">Todos os status</option><option>confirmed</option><option>pending</option><option>completed</option><option>cancelled</option><option>no_show</option></select><button class="btn btn-small" id="refreshAgenda">ATUALIZAR</button></div>
+<div class="table-wrap"><table class="admin-table"><thead><tr><th>DATA</th><th>HORA</th><th>CLIENTE</th><th>SERVIÇO</th><th>BARBEIRO</th><th>VALOR</th><th>STATUS</th><th>AÇÃO</th></tr></thead><tbody id="agendaRows"></tbody></table></div>
+</section>
+
+<section id="clients" class="admin-panel">
+<h2 class="dash-subtitle">Clientes / CRM</h2><div class="filters"><input id="clientSearch" placeholder="Buscar cliente..."></div>
+<div class="table-wrap"><table class="admin-table"><thead><tr><th>NOME</th><th>WHATSAPP</th><th>ATENDIMENTOS</th><th>GASTO</th><th>ÚLTIMA VISITA</th><th>WHATSAPP</th></tr></thead><tbody id="clientRows"></tbody></table></div>
+</section>
+
+<section id="finance" class="admin-panel">
+<h2 class="dash-subtitle">Financeiro</h2>
+<div class="metric-grid"><article class="dash-card"><small>ENTRADAS</small><strong id="fIncome">R$ 0</strong></article><article class="dash-card"><small>DESPESAS</small><strong id="fExpense">R$ 0</strong></article><article class="dash-card"><small>LUCRO</small><strong id="fProfit">R$ 0</strong></article><article class="dash-card"><small>MÊS</small><strong id="fMonth">0</strong><span>transações</span></article></div>
+<div class="form-card"><h3>Registrar movimentação</h3><div class="filters"><select id="finType"><option value="income">Entrada</option><option value="expense">Despesa</option></select><input id="finDesc" placeholder="Descrição"><input id="finAmount" type="number" step="0.01" placeholder="Valor"><select id="finMethod"><option value="shop">Caixa</option><option value="pix">PIX</option><option value="card">Cartão</option><option value="cash">Dinheiro</option></select><input id="finDate" type="date"><button class="btn btn-small" id="addFinance">LANÇAR</button></div></div>
+<div class="table-wrap"><table class="admin-table"><thead><tr><th>DATA</th><th>TIPO</th><th>DESCRIÇÃO</th><th>VALOR</th><th>PAGAMENTO</th></tr></thead><tbody id="financeRows"></tbody></table></div>
+</section>
+
+<section id="club" class="admin-panel">
+<h2 class="dash-subtitle">Black Hands Club</h2>
+<div class="metric-grid"><article class="dash-card"><small>ATIVOS</small><strong id="clubActive">0</strong></article><article class="dash-card"><small>RECEITA MENSAL</small><strong id="clubRevenue">R$ 0</strong></article><article class="dash-card"><small>COMBO 01</small><strong id="club01">0</strong></article><article class="dash-card"><small>COMBO 02</small><strong id="club02">0</strong></article></div>
+<div class="form-card"><h3>Ativar assinatura</h3><div class="filters"><select id="clubClient"></select><select id="clubPlan"><option value="combo_01">Combo 01 — R$ 70/mês</option><option value="combo_02">Combo 02 — R$ 160/mês</option></select><input id="clubDue" type="date"><button class="btn btn-small" id="addClub">ATIVAR</button></div><small>Os combos são utilizados somente de segunda a quinta-feira. O controle de uso pode ser ampliado para baixa automática por serviço.</small></div>
+<div class="table-wrap"><table class="admin-table"><thead><tr><th>CLIENTE</th><th>PLANO</th><th>VALOR</th><th>VENCIMENTO</th><th>STATUS</th></tr></thead><tbody id="clubRows"></tbody></table></div>
+</section>
+
+<section id="barbers" class="admin-panel"><h2 class="dash-subtitle">Barbeiros</h2><div class="table-wrap"><table class="admin-table"><thead><tr><th>NOME</th><th>ATIVO</th><th>AGENDAMENTOS</th><th>FATURAMENTO</th></tr></thead><tbody id="barberRows"></tbody></table></div></section>
+
+<section id="services" class="admin-panel"><h2 class="dash-subtitle">Serviços</h2><div class="table-wrap"><table class="admin-table"><thead><tr><th>SERVIÇO</th><th>PREÇO</th><th>DURAÇÃO</th><th>ATIVO</th></tr></thead><tbody id="serviceRows"></tbody></table></div></section>
+
+<section id="reports" class="admin-panel"><h2 class="dash-subtitle">Relatórios</h2><div class="metric-grid"><article class="dash-card"><small>CONCLUÍDOS</small><strong id="rCompleted">0</strong></article><article class="dash-card"><small>CANCELAMENTOS</small><strong id="rCancelled">0</strong></article><article class="dash-card"><small>NO-SHOW</small><strong id="rNoShow">0</strong></article><article class="dash-card"><small>TAXA DE OCUPAÇÃO</small><strong id="rOccupancy">0%</strong></article></div><p class="section-head">Indicadores calculados a partir dos agendamentos registrados no banco.</p></section>
+
+<section id="settings" class="admin-panel">
+<h2 class="dash-subtitle">Personalização da marca</h2>
+<div class="form-card"><div class="settings-grid">
+<label>Nome da marca<input id="setBrand"></label><label>WhatsApp<input id="setWhatsapp" placeholder="5531999999999"></label>
+<label>Instagram<input id="setInstagram"></label><label>Endereço<input id="setAddress"></label>
+<label>Horário de funcionamento<input id="setHours"></label><label>Cor principal<input id="setPrimary" type="text" placeholder="#f47b20"></label>
+<label>Cor secundária<input id="setSecondary" type="text" placeholder="#080808"></label><label>Título do destaque<input id="setHeroTitle"></label>
+<label class="full">Texto do destaque<textarea id="setHeroText" rows="4"></textarea></label>
+</div><br><button class="btn" id="saveSettings">SALVAR PERSONALIZAÇÃO</button><p id="settingsMsg"></p></div>
+</section>
 </main>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
 <script>
-let sb;const today=new Date();today.setMinutes(today.getMinutes()-today.getTimezoneOffset());const todayISO=today.toISOString().slice(0,10);const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-async function init(){if(!window.SUPABASE_URL?.startsWith('http'))return;sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);const {data:{user}}=await sb.auth.getUser();if(!user){location.href='index.html#authPanel';return;}const {data:p}=await sb.from('profiles').select('role').eq('id',user.id).single();if(p?.role!=='admin'){document.body.innerHTML='<main class="section"><h1>Acesso restrito</h1><p>Somente o administrador pode acessar este painel.</p><a class="btn" href="index.html">VOLTAR</a></main>';return;}
-const [{data:clients},{data:barbers},{data:appointments,error}]=await Promise.all([sb.from('profiles').select('id,full_name,phone,role').eq('role','client').order('full_name'),sb.from('barbers').select('*').eq('active',true),sb.from('appointments').select('id,appointment_date,appointment_time,status,profiles(full_name,phone),barbers(name),services(name)').neq('status','cancelled').gte('appointment_date',todayISO).order('appointment_date').order('appointment_time')]);
-document.getElementById('clients').textContent=clients?.length||0;document.getElementById('barbers').textContent=barbers?.length||0;document.getElementById('bookings').textContent=appointments?.length||0;
-document.getElementById('agenda').innerHTML=appointments?.length?appointments.map(a=>`<article class="booking-item"><strong>${esc(a.appointment_date)} • ${esc(a.appointment_time).slice(0,5)}</strong><span>${esc(a.profiles?.full_name)} — ${esc(a.services?.name)} — ${esc(a.barbers?.name)}</span><em>${esc(a.status)}</em></article>`).join(''):'<p>Nenhum agendamento futuro.</p>';
-document.getElementById('clientList').innerHTML=clients?.length?clients.map(c=>`<article class="booking-item"><strong>${esc(c.full_name)}</strong><span>${esc(c.phone||'WhatsApp não informado')}</span><em>cliente</em></article>`).join(''):'<p>Nenhum cliente.</p>';if(error)console.error(error)}
-document.getElementById('logout').onclick=async()=>{await sb?.auth.signOut();location.href='index.html';};init();
-</script></body></html>
+let sb, appointments=[],clients=[],barbers=[],services=[],finance=[],club=[];
+const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+const today=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)};
+async function init(){
+ if(!window.SUPABASE_URL?.startsWith('http')) return;
+ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+ const {data:{user}}=await sb.auth.getUser();
+ if(!user){location.href='index.html#authPanel';return}
+ const {data:p}=await sb.from('profiles').select('role').eq('id',user.id).single();
+ if(p?.role!=='admin'){document.body.innerHTML='<main class="section"><h1>Acesso restrito</h1><p>Somente o administrador pode acessar este painel.</p><a class="btn" href="index.html">VOLTAR</a></main>';return}
+ await loadAll();
+}
+async function loadAll(){
+ const [c,b,s,a,f,cl]=await Promise.all([
+  sb.from('profiles').select('id,full_name,phone,role').eq('role','client').order('full_name'),
+  sb.from('barbers').select('*').order('name'),
+  sb.from('services').select('*').order('name'),
+  sb.from('appointments').select('id,client_id,barber_id,service_id,appointment_date,appointment_time,status,payment_method,profiles(full_name,phone),barbers(name),services(name,price)').order('appointment_date',{ascending:false}).order('appointment_time'),
+  sb.from('financial_transactions').select('*').order('transaction_date',{ascending:false}),
+  sb.from('club_subscriptions').select('*,profiles(full_name,phone)').order('due_date',{ascending:true})
+ ]);
+ clients=c.data||[];barbers=b.data||[];services=s.data||[];appointments=a.data||[];finance=f.data||[];club=cl.data||[];
+ render();
+}
+function render(){
+ const future=appointments.filter(a=>a.status!=='cancelled'&&a.appointment_date>=today());
+ const completed=appointments.filter(a=>a.status==='completed');
+ const revenue=completed.reduce((t,a)=>t+Number(a.services?.price||0),0);
+ document.getElementById('mRevenue').textContent=money(revenue);document.getElementById('mBookings').textContent=future.length;document.getElementById('mClients').textContent=clients.length;document.getElementById('mTicket').textContent=money(completed.length?revenue/completed.length:0);
+ document.getElementById('dashAgenda').innerHTML=future.slice().sort((x,y)=>(x.appointment_date+x.appointment_time).localeCompare(y.appointment_date+y.appointment_time)).slice(0,10).map(a=>item(a)).join('')||'<p>Nenhum atendimento futuro.</p>';
+ renderAgenda();renderClients();renderFinance();renderClub();renderBarbers();renderServices();renderReports();
+}
+function item(a){return '<article class="booking-item"><strong>'+esc(a.appointment_date)+' • '+esc(String(a.appointment_time).slice(0,5))+'</strong><span>'+esc(a.profiles?.full_name)+' — '+esc(a.services?.name)+' — '+esc(a.barbers?.name)+'</span><em>'+esc(a.status)+'</em></article>'}
+function renderAgenda(){
+ let arr=appointments.filter(a=>!document.getElementById('agendaDate').value||a.appointment_date===document.getElementById('agendaDate').value).filter(a=>!document.getElementById('agendaStatus').value||a.status===document.getElementById('agendaStatus').value);
+ document.getElementById('agendaRows').innerHTML=arr.map(a=>'<tr><td>'+esc(a.appointment_date)+'</td><td>'+esc(String(a.appointment_time).slice(0,5))+'</td><td>'+esc(a.profiles?.full_name)+'</td><td>'+esc(a.services?.name)+'</td><td>'+esc(a.barbers?.name)+'</td><td>'+money(a.services?.price)+'</td><td>'+esc(a.status)+'</td><td><button onclick="setStatus(\''+a.id+'\',\'completed\')">Concluir</button> <button onclick="setStatus(\''+a.id+'\',\'cancelled\')">Cancelar</button></td></tr>').join('')||'<tr><td colspan="8">Nenhum registro.</td></tr>';
+}
+async function setStatus(id,status){const {error}=await sb.from('appointments').update({status}).eq('id',id);if(error)alert(error.message);else await loadAll()}
+function renderClients(){
+ const q=document.getElementById('clientSearch').value.toLowerCase();
+ const arr=clients.filter(c=>String(c.full_name).toLowerCase().includes(q)||String(c.phone||'').includes(q));
+ document.getElementById('clientRows').innerHTML=arr.map(c=>{const aa=appointments.filter(a=>a.client_id===c.id),spent=aa.filter(a=>a.status==='completed').reduce((t,a)=>t+Number(a.services?.price||0),0),last=aa.slice().sort((x,y)=>y.appointment_date.localeCompare(x.appointment_date))[0]?.appointment_date||'-';const wa=String(c.phone||'').replace(/\D/g,'');return '<tr><td>'+esc(c.full_name)+'</td><td>'+esc(c.phone||'-')+'</td><td>'+aa.length+'</td><td>'+money(spent)+'</td><td>'+esc(last)+'</td><td>'+(wa?'<a class="wa" target="_blank" href="https://wa.me/'+wa+'">ABRIR</a>':'-')+'</td></tr>'}).join('');
+}
+function renderFinance(){
+ const month=today().slice(0,7);const monthRows=finance.filter(x=>String(x.transaction_date).startsWith(month));const income=monthRows.filter(x=>x.type==='income').reduce((t,x)=>t+Number(x.amount),0);const expense=monthRows.filter(x=>x.type==='expense').reduce((t,x)=>t+Number(x.amount),0);
+ document.getElementById('fIncome').textContent=money(income);document.getElementById('fExpense').textContent=money(expense);document.getElementById('fProfit').textContent=money(income-expense);document.getElementById('fMonth').textContent=monthRows.length;
+ document.getElementById('financeRows').innerHTML=finance.map(x=>'<tr><td>'+esc(x.transaction_date)+'</td><td>'+esc(x.type)+'</td><td>'+esc(x.description)+'</td><td>'+money(x.amount)+'</td><td>'+esc(x.payment_method)+'</td></tr>').join('')||'<tr><td colspan="5">Nenhuma movimentação.</td></tr>';
+}
+function renderClub(){
+ const active=club.filter(x=>x.status==='active');document.getElementById('clubActive').textContent=active.length;document.getElementById('clubRevenue').textContent=money(active.reduce((t,x)=>t+Number(x.monthly_price),0));document.getElementById('club01').textContent=active.filter(x=>x.plan==='combo_01').length;document.getElementById('club02').textContent=active.filter(x=>x.plan==='combo_02').length;
+ document.getElementById('clubClient').innerHTML='<option value="">Selecione o cliente</option>'+clients.map(c=>'<option value="'+c.id+'">'+esc(c.full_name)+'</option>').join('');
+ document.getElementById('clubRows').innerHTML=club.map(x=>'<tr><td>'+esc(x.profiles?.full_name)+'</td><td>'+esc(x.plan)+'</td><td>'+money(x.monthly_price)+'</td><td>'+esc(x.due_date)+'</td><td>'+esc(x.status)+'</td></tr>').join('')||'<tr><td colspan="5">Nenhuma assinatura.</td></tr>';
+}
+function renderBarbers(){document.getElementById('barberRows').innerHTML=barbers.map(b=>{const aa=appointments.filter(a=>a.barber_id===b.id),rev=aa.filter(a=>a.status==='completed').reduce((t,a)=>t+Number(a.services?.price||0),0);return '<tr><td>'+esc(b.name)+'</td><td>'+esc(b.active?'Sim':'Não')+'</td><td>'+aa.length+'</td><td>'+money(rev)+'</td></tr>'}).join('')}
+function renderServices(){document.getElementById('serviceRows').innerHTML=services.map(s=>'<tr><td>'+esc(s.name)+'</td><td>'+money(s.price)+'</td><td>'+s.duration_minutes+' min</td><td>'+esc(s.active?'Sim':'Não')+'</td></tr>').join('')}
+function renderReports(){const total=appointments.length,completed=appointments.filter(a=>a.status==='completed').length,cancelled=appointments.filter(a=>a.status==='cancelled').length,no=appointments.filter(a=>a.status==='no_show').length;document.getElementById('rCompleted').textContent=completed;document.getElementById('rCancelled').textContent=cancelled;document.getElementById('rNoShow').textContent=no;document.getElementById('rOccupancy').textContent=total?Math.round((completed/total)*100)+'%':'0%'}
+document.querySelectorAll('.admin-nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.admin-nav button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.admin-panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.tab).classList.add('active')});
+document.getElementById('agendaDate').value=today();document.getElementById('agendaDate').onchange=renderAgenda;document.getElementById('agendaStatus').onchange=renderAgenda;document.getElementById('refreshAgenda').onclick=renderAgenda;document.getElementById('clientSearch').oninput=renderClients;
+document.getElementById('addFinance').onclick=async()=>{const amount=Number(document.getElementById('finAmount').value);const description=document.getElementById('finDesc').value.trim();if(!amount||!description)return alert('Informe descrição e valor.');const {error}=await sb.from('financial_transactions').insert({type:document.getElementById('finType').value,description,amount,payment_method:document.getElementById('finMethod').value,transaction_date:document.getElementById('finDate').value||today()});if(error)alert(error.message);else{document.getElementById('finDesc').value='';document.getElementById('finAmount').value='';await loadAll()}};
+document.getElementById('addClub').onclick=async()=>{const client_id=document.getElementById('clubClient').value,plan=document.getElementById('clubPlan').value,due=document.getElementById('clubDue').value;if(!client_id||!due)return alert('Selecione cliente e vencimento.');const price=plan==='combo_01'?70:160;const {error}=await sb.from('club_subscriptions').insert({client_id,plan,monthly_price:price,start_date:today(),due_date:due,status:'active'});if(error)alert(error.message);else await loadAll()};
+async function loadSettings(){const {data,error}=await sb.from('site_settings').select('*').eq('id',1).single();if(error||!data)return;document.getElementById('setBrand').value=data.brand_name||'';document.getElementById('setWhatsapp').value=data.whatsapp||'';document.getElementById('setInstagram').value=data.instagram||'';document.getElementById('setAddress').value=data.address||'';document.getElementById('setHours').value=data.opening_hours||'';document.getElementById('setPrimary').value=data.primary_color||'';document.getElementById('setSecondary').value=data.secondary_color||'';document.getElementById('setHeroTitle').value=data.hero_title||'';document.getElementById('setHeroText').value=data.hero_text||''}
+document.getElementById('saveSettings').onclick=async()=>{const row={id:1,brand_name:document.getElementById('setBrand').value,whatsapp:document.getElementById('setWhatsapp').value,instagram:document.getElementById('setInstagram').value,address:document.getElementById('setAddress').value,opening_hours:document.getElementById('setHours').value,primary_color:document.getElementById('setPrimary').value,secondary_color:document.getElementById('setSecondary').value,hero_title:document.getElementById('setHeroTitle').value,hero_text:document.getElementById('setHeroText').value,updated_at:new Date().toISOString()};const {error}=await sb.from('site_settings').upsert(row);document.getElementById('settingsMsg').textContent=error?'Erro: '+error.message:'Personalização salva.';};
+document.getElementById('logout').onclick=async()=>{await sb?.auth.signOut();location.href='index.html'};
+init().then(loadSettings);
+</script>
+</body></html>
