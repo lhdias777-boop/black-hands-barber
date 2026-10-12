@@ -122,9 +122,11 @@ async function api(req,res,url) {
   if (req.method === 'POST' && url.pathname === '/api/payments/pix') {
     try {
       const body = await readBody(req);
-      const email = String(body.email || '').trim().slice(0,180);
-      const name = String(body.name || '').trim().slice(0,120);
       const phone = String(body.phone || '').replace(/\D/g,'').slice(0,13);
+      const suppliedEmail = String(body.email || '').trim().slice(0,180);
+      const email = suppliedEmail || ('guest.'+phone+'@blackhands.local');
+      const name = String(body.name || '').trim().slice(0,120);
+      const cpfCnpj = String(body.cpfCnpj || '').replace(/\D/g,'').slice(0,14);
       const kind = body.kind === 'booking' ? 'booking' : 'club';
       let value, description, reference;
       if (kind === 'club') {
