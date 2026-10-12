@@ -159,7 +159,11 @@
       </div>
       <div id="clubPayment" class="form-card" hidden>
         <h3 id="clubPaymentTitle">Pagamento Pix</h3>
-        <p id="clubPaymentStatus">Gerando cobrança segura...</p>
+        <p id="clubPaymentStatus">Preencha os dados para gerar o QR Code.</p>
+        <form id="cpfPaymentForm" class="filters">
+          <label>CPF do pagador <input id="paymentCpf" inputmode="numeric" autocomplete="off" maxlength="18" placeholder="000.000.000-00" required></label>
+          <button type="submit" class="btn btn-small">GERAR QR PIX</button>
+        </form>
         <img id="clubQrImage" alt="QR Code Pix para pagamento" style="display:none;max-width:260px;width:100%;background:#fff;padding:12px;border-radius:8px">
         <label id="clubPixLabel" style="display:none">Pix copia e cola<textarea id="clubPixPayload" rows="4" readonly style="width:100%;margin-top:8px"></textarea></label>
         <button type="button" id="copyClubPix" class="btn btn-small" style="display:none">COPIAR PIX</button>
