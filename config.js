@@ -1,5 +1,4 @@
 // CONFIGURAÇÃO DO SUPABASE
-// Depois de criar o projeto no Supabase, coloque aqui apenas a URL e a chave pública.
-// NUNCA coloque a service_role key neste arquivo.
-window.SUPABASE_URL = 'COLE_AQUI_A_URL_DO_SEU_SUPABASE';
-window.SUPABASE_ANON_KEY = 'COLE_AQUI_A_CHAVE_PUBLICA_DO_SUPABASE';
+// Chave pública (publishable/anon) — nunca use service_role aqui.
+window.SUPABASE_URL = 'https://nfemozpmqfgedxfuzamm.supabase.co';
+window.SUPABASE_ANON_KEY = 'sb_publishable_2Fjo5yAlInqT8UUGn8axUg_iK8Wcy7E';
