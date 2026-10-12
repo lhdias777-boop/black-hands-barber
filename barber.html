@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Black Hands — Área do Barbeiro</title><link rel="stylesheet" href="styles.css"></head>
+<body class="dashboard-page">
+<header class="topbar"><a class="brand" href="index.html"><span class="brand-mark">BH</span><span><strong>BLACK HANDS</strong><small>BARBER SHOP</small></span></a><div><button class="btn btn-small" id="logout">SAIR</button></div></header>
+<main class="dashboard section">
+  <div class="section-head"><div><p class="eyebrow">ÁREA DO BARBEIRO</p><h1 class="dash-title">Minha agenda.</h1></div><p id="barberName">Carregando...</p></div>
+  <div class="dash-grid"><article class="dash-card"><small>HOJE</small><strong id="todayCount">0</strong><span>agendamentos</span></article><article class="dash-card"><small>PRÓXIMOS</small><strong id="futureCount">0</strong><span>horários</span></article></div>
+  <section><h2 class="dash-subtitle">Meus agendados de hoje</h2><div id="todayList" class="booking-list"></div></section>
+  <section><h2 class="dash-subtitle">Próximos atendimentos</h2><div id="futureList" class="booking-list"></div></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
+<script>
+let sb;
+const today=new Date(); today.setMinutes(today.getMinutes()-today.getTimezoneOffset()); const todayISO=today.toISOString().slice(0,10);
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+async function init(){
+ if(!window.SUPABASE_URL?.startsWith('http')){document.getElementById('barberName').textContent='Configure o config.js';return;}
+ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY); const {data:{user}}=await sb.auth.getUser(); if(!user){location.href='index.html#authPanel';return;}
+ const {data:profile}=await sb.from('profiles').select('*').eq('id',user.id).single(); if(!profile||!['barber','admin'].includes(profile.role)){document.body.innerHTML='<main class="section"><h1>Acesso restrito</h1><p>Esta área é exclusiva para barbeiros.</p><a class="btn" href="index.html">VOLTAR</a></main>';return;}
+ const {data:barber}=await sb.from('barbers').select('*').eq('user_id',user.id).single(); if(!barber){document.getElementById('barberName').textContent='Usuário ainda não vinculado a um barbeiro no banco.';return;}
+ document.getElementById('barberName').textContent=barber.name;
+ const {data:rows,error}=await sb.from('appointments').select('id,appointment_date,appointment_time,status,payment_method,profiles(full_name,phone),services(name,price)').eq('barber_id',barber.id).neq('status','cancelled').gte('appointment_date',todayISO).order('appointment_date').order('appointment_time');
+ if(error){document.getElementById('todayList').innerHTML='<p>'+esc(error.message)+'</p>';return;}
+ const todayRows=(rows||[]).filter(x=>x.appointment_date===todayISO), futureRows=(rows||[]).filter(x=>x.appointment_date>todayISO);
+ document.getElementById('todayCount').textContent=todayRows.length;document.getElementById('futureCount').textContent=futureRows.length;
+ const render=r=>r.length?r.map(x=>`<article class="booking-item"><strong>${esc(x.appointment_time).slice(0,5)} — ${esc(x.profiles?.full_name)}</strong><span>${esc(x.services?.name)} • ${esc(x.profiles?.phone||'WhatsApp não informado')}</span><em>${esc(x.status)}</em></article>`).join(''):'<p>Nenhum atendimento encontrado.</p>';
+ document.getElementById('todayList').innerHTML=render(todayRows);document.getElementById('futureList').innerHTML=render(futureRows);
+}
+document.getElementById('logout').onclick=async()=>{await sb?.auth.signOut();location.href='index.html';};init();
+</script></body></html>

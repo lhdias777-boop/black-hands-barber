@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090909">
+  <title>Black Hands Barber Shop</title>
+  <meta name="description" content="Black Hands Barber Shop — agende seu horário, conheça os serviços e faça parte do Black Hands Club.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#inicio" aria-label="Black Hands">
+      <span class="brand-mark">BH</span>
+      <span><strong>BLACK HANDS</strong><small>BARBER SHOP</small></span>
+    </a>
+    <nav>
+      <a href="#servicos">Serviços</a>
+      <a href="#agendar">Agendar</a>
+      <a href="#club">Club</a>
+      <a href="#loja">Loja</a>
+      <a href="#avaliacoes">Avaliações</a>
+    </nav>
+    <a class="btn btn-small" href="#agendar">Agendar</a>
+  </header>
+
+  <section class="announcement-slider" aria-label="Anúncios Black Hands">
+    <div class="slider-track" id="sliderTrack">
+      <article class="slide active">
+        <img src="banner-1.jpg" alt="Black Hands Barber Shop">
+        <div class="slide-content">
+          <span>BLACK HANDS BARBER SHOP</span>
+          <h2>Seu estilo começa aqui.</h2>
+          <p>Agende seu horário online e viva a experiência Black Hands.</p>
+          <a class="btn" href="#agendar">AGENDAR AGORA</a>
+        </div>
+      </article>
+      <article class="slide">
+        <img src="banner-2.jpg" alt="Black Hands Barber Shop">
+        <div class="slide-content">
+          <span>BLACK HANDS CLUB</span>
+          <h2>Faça parte do clube.</h2>
+          <p>Planos mensais, benefícios exclusivos e muito mais.</p>
+          <a class="btn" href="#club">CONHECER CLUB</a>
+        </div>
+      </article>
+    </div>
+    <button class="slider-arrow prev" id="prevSlide" aria-label="Anúncio anterior">‹</button>
+    <button class="slider-arrow next" id="nextSlide" aria-label="Próximo anúncio">›</button>
+    <div class="slider-dots" id="sliderDots">
+      <button class="dot active" data-slide="0" aria-label="Anúncio 1"></button>
+      <button class="dot" data-slide="1" aria-label="Anúncio 2"></button>
+    </div>
+    <div class="drag-hint">← arraste para o lado →</div>
+  </section>
+
+  <main>
+    <section id="inicio" class="hero">
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <p class="eyebrow">ESTILO • PRECISÃO • EXPERIÊNCIA</p>
+        <h1>Seu estilo.<br><span>Nossa assinatura.</span></h1>
+        <p class="hero-copy">Agende seu horário online, escolha seu serviço e deixe o visual nas mãos da Black Hands.</p>
+        <div class="actions">
+          <a class="btn" href="#agendar">AGENDAR HORÁRIO</a>
+          <a class="btn btn-ghost" href="#servicos">VER SERVIÇOS</a>
+        </div>
+        <div class="trust-row">
+          <span>✓ Agenda online</span>
+          <span>✓ Pagamento antecipado</span>
+          <span>✓ Black Hands Club</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="stats">
+      <div><strong>07</strong><span>serviços iniciais</span></div>
+      <div><strong>24/7</strong><span>agendamento online</span></div>
+      <div><strong>★ 5,0</strong><span>experiência Black Hands</span></div>
+    </section>
+
+    <section id="servicos" class="section">
+      <div class="section-head">
+        <div><p class="eyebrow">SERVIÇOS</p><h2>Escolha seu cuidado.</h2></div>
+        <p>Preços iniciais baseados na tabela enviada. Tudo poderá ser alterado pelo painel administrativo.</p>
+      </div>
+      <div class="service-grid">
+        <article class="service"><span>01</span><h3>Cabelo</h3><p>Corte e acabamento.</p><strong>R$ 35,00</strong><button onclick="selectService('Cabelo',35)">Agendar</button></article>
+        <article class="service"><span>02</span><h3>Barba</h3><p>Barba com acabamento.</p><strong>R$ 30,00</strong><button onclick="selectService('Barba',30)">Agendar</button></article>
+        <article class="service"><span>03</span><h3>Pintura</h3><p>Procedimento de pintura.</p><strong>R$ 15,00</strong><button onclick="selectService('Pintura',15)">Agendar</button></article>
+        <article class="service"><span>04</span><h3>Relaxamento</h3><p>Tratamento para o cabelo.</p><strong>R$ 15,00</strong><button onclick="selectService('Relaxamento',15)">Agendar</button></article>
+        <article class="service"><span>05</span><h3>Pigmentação</h3><p>Realce e acabamento.</p><strong>R$ 15,00</strong><button onclick="selectService('Pigmentação',15)">Agendar</button></article>
+        <article class="service"><span>06</span><h3>Pezinho</h3><p>Acabamento preciso.</p><strong>R$ 10,00</strong><button onclick="selectService('Pezinho',10)">Agendar</button></article>
+        <article class="service"><span>07</span><h3>Sobrancelha</h3><p>Acabamento da sobrancelha.</p><strong>R$ 10,00</strong><button onclick="selectService('Sobrancelha',10)">Agendar</button></article>
+      </div>
+    </section>
+
+    <section id="authPanel" class="section auth-section">
+      <div class="section-head"><div><p class="eyebrow">ÁREA DO CLIENTE</p><h2 id="authTitle">Entrar na conta.</h2></div><p>Crie sua conta uma única vez. Depois, para agendar, basta escolher serviço, barbeiro, data e horário.</p></div>
+      <div id="authBox"></div>
+      <form id="authForm" class="auth-form">
+        <input type="hidden" id="authMode" value="login">
+        <label id="authNameWrap" hidden>Nome completo<input id="authName" type="text" placeholder="Seu nome"></label>
+        <label id="authPhoneWrap" hidden>WhatsApp<input id="authPhone" type="tel" placeholder="(31) 99999-9999"></label>
+        <label>E-mail<input id="authEmail" type="email" placeholder="voce@email.com" required></label>
+        <label>Senha<input id="authPassword" type="password" minlength="6" placeholder="Mínimo 6 caracteres" required></label>
+        <button class="btn" id="authSubmit" type="submit">ENTRAR</button>
+        <button class="btn btn-ghost" id="authToggle" type="button">Ainda não tenho conta</button>
+        <p id="authMessage" class="auth-message"></p>
+      </form>
+    </section>
+
+    <section id="agendar" class="booking section-dark">
+      <div class="section-head">
+        <div><p class="eyebrow">AGENDAMENTO ONLINE</p><h2>Reserve seu horário.</h2></div>
+        <p>Escolha serviço, barbeiro, data e horário. Os horários ocupados ficam bloqueados e o banco impede reservas duplicadas.</p>
+      </div>
+      <form id="bookingForm" class="booking-form">
+        <label>Serviço<select id="service" required>
+          <option value="">Selecione</option>
+          <option>Cabelo — R$ 35,00</option><option>Barba — R$ 30,00</option><option>Pintura — R$ 15,00</option>
+          <option>Relaxamento — R$ 15,00</option><option>Pigmentação — R$ 15,00</option><option>Pezinho — R$ 10,00</option><option>Sobrancelha — R$ 10,00</option>
+        </select></label>
+        <label>Barbeiro<select id="barber" required><option value="">Selecione</option><option>Primeiro barbeiro disponível</option></select></label>
+        <label>Data<input id="date" type="date" required></label>
+        <label>Horário<select id="time" required><option value="">Selecione uma data primeiro</option></select></label>
+        <div class="logged-user-note">Seus dados de cliente vêm da conta conectada.</div>
+        <div class="payment-box">
+          <strong>Forma de pagamento</strong>
+          <div class="payment-options">
+            <label><input type="radio" name="payment" value="online" checked> Pagar agora</label>
+            <label><input type="radio" name="payment" value="shop"> Pagar na barbearia</label>
+          </div>
+        </div>
+        <button class="btn full" type="submit">CONFIRMAR AGENDAMENTO</button>
+      </form>
+      <div id="bookingResult" class="result" hidden></div>
+    </section>
+
+    <section id="meus-agendamentos" class="section">
+      <div class="section-head"><div><p class="eyebrow">MINHA CONTA</p><h2>Meus agendamentos.</h2></div><p>Veja seus horários confirmados e o barbeiro responsável pelo atendimento.</p></div>
+      <div id="myBookings" class="my-bookings"><p>Entre na sua conta para visualizar seus agendamentos.</p></div>
+    </section>
+
+    <section id="club" class="section club">
+      <div class="club-copy">
+        <p class="eyebrow">BLACK HANDS CLUB</p>
+        <h2>Seu cuidado,<br><span>todo mês.</span></h2>
+        <p>Planos recorrentes com benefícios e quantidade de serviços definida pela barbearia. O cliente poderá acompanhar tudo pela própria conta.</p>
+        <a class="btn" href="#agendar">QUERO CONHECER</a>
+      </div>
+      <div class="plan-grid">
+        <article class="plan"><small>PLANO 01</small><h3>Black</h3><p>Plano mensal personalizável.</p><strong>R$ — / mês</strong><button>Ver plano</button></article>
+        <article class="plan featured"><small>PLANO 02</small><h3>Black Plus</h3><p>Mais serviços e benefícios.</p><strong>R$ — / mês</strong><button>Ver plano</button></article>
+        <article class="plan"><small>PLANO 03</small><h3>Black VIP</h3><p>Experiência premium.</p><strong>R$ — / mês</strong><button>Ver plano</button></article>
+      </div>
+    </section>
+
+    <section id="loja" class="section">
+      <div class="section-head"><div><p class="eyebrow">BLACK HANDS STORE</p><h2>Produtos da casa.</h2></div><p>A loja ficará conectada ao estoque, pedidos e pagamentos.</p></div>
+      <div class="product-grid">
+        <article class="product"><div class="product-photo">POMADA</div><h3>Pomada Black Hands</h3><p>Produto da barbearia</p><strong>R$ —</strong><button>Adicionar</button></article>
+        <article class="product"><div class="product-photo">BARBA</div><h3>Kit para barba</h3><p>Kit personalizável</p><strong>R$ —</strong><button>Adicionar</button></article>
+        <article class="product"><div class="product-photo">STYLE</div><h3>Kit Black Hands</h3><p>Produtos selecionados</p><strong>R$ —</strong><button>Adicionar</button></article>
+      </div>
+    </section>
+
+    <section id="avaliacoes" class="section testimonials">
+      <div class="section-head"><div><p class="eyebrow">FEEDBACKS</p><h2>Experiências reais.</h2></div><p>As avaliações poderão ser liberadas após atendimentos concluídos.</p></div>
+      <div class="testimonial-grid">
+        <article><div class="stars">★★★★★</div><p>“Espaço, atendimento e acabamento em outro nível.”</p><strong>Cliente Black Hands</strong></article>
+        <article><div class="stars">★★★★★</div><p>“Agendei, fui atendido no horário e saí satisfeito.”</p><strong>Cliente Black Hands</strong></article>
+        <article><div class="stars">★★★★★</div><p>“Experiência completa e atendimento profissional.”</p><strong>Cliente Black Hands</strong></article>
+      </div>
+    </section>
+
+    <section class="cta">
+      <p class="eyebrow">BLACK HANDS BARBER SHOP</p>
+      <h2>Pronto para renovar o visual?</h2>
+      <a class="btn" href="#agendar">AGENDAR AGORA</a>
+    </section>
+  </main>
+
+  <footer>
+    <div><strong>BLACK HANDS</strong><small>BARBER SHOP</small></div>
+    <div class="footer-links"><a href="#servicos">Serviços</a><a href="#agendar">Agendamento</a><a href="#club">Club</a><a href="#loja">Loja</a></div>
+    <p>© 2026 Black Hands Barber Shop. Todos os direitos reservados.</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
