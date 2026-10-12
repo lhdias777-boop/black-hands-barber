@@ -95,6 +95,11 @@ async function updateAuthUI(){
   const user=await getUser();
   if(!authBox) return;
   const authSection=document.getElementById('authPanel');
+  const headerLogout=document.getElementById('headerLogout');
+  if(headerLogout){
+    headerLogout.hidden=!user;
+    headerLogout.onclick=async()=>{await sb.auth.signOut();location.reload();};
+  }
   if(user){
     authSection.style.display='none';
     authBox.innerHTML=`<div class="account-card"><div><small>LOGADO</small><strong>${user.email}</strong></div><button class="btn btn-small" id="logoutBtn">SAIR</button></div>`;
