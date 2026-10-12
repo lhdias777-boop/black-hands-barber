@@ -116,6 +116,15 @@ document.getElementById("bookingForm").addEventListener("submit",async e=>{
 
 barberSelect.addEventListener('change',loadAvailableTimes); dateInput.addEventListener('change',loadAvailableTimes);
 dateInput.min=todayISO();
+dateInput.addEventListener('input',()=>{
+  if(!dateInput.value) return;
+  const day=new Date(dateInput.value+'T12:00:00').getDay();
+  if(day===0){
+    dateInput.value='';
+    timeSelect.innerHTML='<option value="">Domingo não temos atendimento</option>';
+    setResult('<strong>Domingo não temos atendimento.</strong><br>Escolha uma data de segunda a sábado.',false);
+  }
+});
 
 // Auth
 const authForm=document.getElementById('authForm');
