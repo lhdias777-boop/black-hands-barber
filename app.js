@@ -251,8 +251,14 @@ document.getElementById('cpfPaymentForm').addEventListener('submit',async(e)=>{
 document.getElementById('buyCombo01').addEventListener('click',()=>buyClub('combo_01'));
 document.getElementById('buyCombo02').addEventListener('click',()=>buyClub('combo_02'));
 async function buyClub(plan){
-  const user=await getUser();
-  if(!user){setResult('<strong>Entre na sua conta para assinar o Club.</strong>',false);document.getElementById('authPanel').style.display='';document.getElementById('authPanel').scrollIntoView({behavior:'smooth'});return;}
+  const client=getClientData();
+  if(!client.name||!client.phone){
+    const booking=document.getElementById('agendar');
+    booking.classList.remove('booking-hidden');
+    booking.scrollIntoView({behavior:'smooth'});
+    setResult('<strong>Preencha seu nome e WhatsApp no agendamento para continuar.</strong>',false);
+    return;
+  }
   try{preparePixPayment('club',{plan});}
   catch(error){document.getElementById('clubPayment').hidden=false;document.getElementById('clubPaymentStatus').textContent='Erro: '+error.message;document.getElementById('clubPayment').scrollIntoView({behavior:'smooth'});}
 }
@@ -289,3 +295,7 @@ track.addEventListener('pointercancel',()=>{dragging=false;track.classList.remov
 
 initSupabase();
 restoreClientData();
+
+
+document.querySelectorAll('a[href="#agendar"]').forEach(link=>{link.addEventListener('click',e=>{e.preventDefault();const booking=document.getElementById('agendar');booking.classList.remove('booking-hidden');booking.scrollIntoView({behavior:'smooth'});history.replaceState(null,'','#agendar');});});
+if(location.hash==='#agendar') document.getElementById('agendar')?.classList.remove('booking-hidden');
