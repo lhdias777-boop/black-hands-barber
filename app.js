@@ -4,7 +4,8 @@ const timeSelect = document.getElementById("time");
 const serviceOptions = document.getElementById("serviceOptions");
 let pendingBooking = null;
 let currentPaymentId = null;
-let currentPaymentKind = null;\nlet queuedPayment = null;
+let currentPaymentKind = null;
+let queuedPayment = null;
 const barberSelect = document.getElementById("barber");
 const result = document.getElementById("bookingResult");
 const authBox = document.getElementById("authBox");
@@ -121,7 +122,19 @@ async function loadMyBookings(){
   box.innerHTML=data?.length?data.map(a=>`<article class="booking-item"><strong>${a.services?.name||'Serviço'}</strong><span>${a.appointment_date} às ${String(a.appointment_time).slice(0,5)} • ${a.barbers?.name||''}</span><em>${a.status}</em></article>`).join(''):'<p>Você ainda não possui agendamentos.</p>';
 }
 
-function preparePixPayment(kind, extra={}){\n  queuedPayment={kind,extra};\n  const panel=document.getElementById('clubPayment');panel.hidden=false;\n  document.getElementById('cpfPaymentForm').style.display='flex';\n  document.getElementById('clubQrImage').style.display='none';\n  document.getElementById('clubPixLabel').style.display='none';\n  document.getElementById('copyClubPix').style.display='none';\n  document.getElementById('checkClubPayment').style.display='none';\n  document.getElementById('clubPaymentTitle').textContent='Dados para gerar o Pix';\n  document.getElementById('clubPaymentStatus').textContent='Informe o CPF/CNPJ do pagador para criar a cobrança no Asaas.';\n  panel.scrollIntoView({behavior:'smooth',block:'center'});\n}\nasync function createPixPayment(kind, extra={}){
+function preparePixPayment(kind, extra={}){
+  queuedPayment={kind,extra};
+  const panel=document.getElementById('clubPayment');panel.hidden=false;
+  document.getElementById('cpfPaymentForm').style.display='flex';
+  document.getElementById('clubQrImage').style.display='none';
+  document.getElementById('clubPixLabel').style.display='none';
+  document.getElementById('copyClubPix').style.display='none';
+  document.getElementById('checkClubPayment').style.display='none';
+  document.getElementById('clubPaymentTitle').textContent='Dados para gerar o Pix';
+  document.getElementById('clubPaymentStatus').textContent='Informe o CPF/CNPJ do pagador para criar a cobrança no Asaas.';
+  panel.scrollIntoView({behavior:'smooth',block:'center'});
+}
+async function createPixPayment(kind, extra={}){
   const user=await getUser();
   if(!user) throw new Error('Entre na sua conta antes de continuar.');
   const {data:profile}=await sb.from('profiles').select('full_name,phone').eq('id',user.id).maybeSingle();
@@ -130,7 +143,8 @@ function preparePixPayment(kind, extra={}){\n  queuedPayment={kind,extra};\n  co
   const response=await fetch('/api/payments/pix',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,plan:extra.plan,services:extra.services,email:user.email,name,phone,cpfCnpj:document.getElementById('paymentCpf').value})});
   const data=await response.json();
   if(!response.ok) throw new Error(data.error||'Não foi possível gerar o Pix.');
-  currentPaymentId=data.paymentId;currentPaymentKind=kind;\n  document.getElementById('cpfPaymentForm').style.display='none';
+  currentPaymentId=data.paymentId;currentPaymentKind=kind;
+  document.getElementById('cpfPaymentForm').style.display='none';
   document.getElementById('clubPayment').hidden=false;
   document.getElementById('clubPayment').scrollIntoView({behavior:'smooth',block:'center'});
   document.getElementById('clubPaymentTitle').textContent=kind==='club'?'Pix do Black Hands Club':'Pix do agendamento';
@@ -249,7 +263,8 @@ document.getElementById('checkClubPayment').onclick=async()=>{
  }catch(error){document.getElementById('clubPaymentStatus').textContent='Erro ao verificar: '+error.message;}
  finally{btn.disabled=false;}
 };
-\n// Carrossel
+
+// Carrossel
 const track = document.getElementById("sliderTrack"); const slides=[...document.querySelectorAll('.slide')]; const dots=[...document.querySelectorAll('.dot')]; let currentSlide=0,startX=0,deltaX=0,dragging=false,autoTimer;
 function showSlide(i){currentSlide=(i+slides.length)%slides.length;track.style.transform=`translateX(-${currentSlide*100}%)`;slides.forEach((s,n)=>s.classList.toggle('active',n===currentSlide));dots.forEach((d,n)=>d.classList.toggle('active',n===currentSlide));}
 document.getElementById('prevSlide').onclick=()=>showSlide(currentSlide-1);document.getElementById('nextSlide').onclick=()=>showSlide(currentSlide+1);dots.forEach(d=>d.onclick=()=>showSlide(Number(d.dataset.slide)));
