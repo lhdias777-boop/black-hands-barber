@@ -39,21 +39,32 @@ async function api(req,res,url) {
       const email = String(body.email || '').trim().slice(0,180);
       const name = String(body.name || '').trim().slice(0,120);
       const phone = String(body.phone || '').replace(/\D/g,'').slice(0,13);
-      const plan = body.plan === 'combo_02' ? 'combo_02' : body.plan === 'combo_01' ? 'combo_01' : '';
-      if (!plan || !email || !name) return send(res,400,{error:'Informe nome, e-mail e combo.'});
-      const value = plan === 'combo_01' ? 70 : 160;
+      const kind = body.kind === 'booking' ? 'booking' : 'club';
+      let value, description, reference;
+      if (kind === 'club') {
+        const plan = body.plan === 'combo_02' ? 'combo_02' : body.plan === 'combo_01' ? 'combo_01' : '';
+        if (!plan || !email || !name) return send(res,400,{error:'Informe nome, e-mail e combo.'});
+        value = plan === 'combo_01' ? 70 : 160;
+        description = 'Black Hands Club - '+(plan==='combo_01'?'Combo 01':'Combo 02')+' - primeiro mês';
+        reference = 'bhclub-'+plan+'-'+Date.now();
+      } else {
+        const allowed = {'Cabelo':35,'Barba':30,'Pintura':15,'Relaxamento':15,'Pigmentação':15,'Pezinho':10,'Sobrancelha':10};
+        const chosen = Array.isArray(body.services) ? [...new Set(body.services.map(x=>String(x)))] : [];
+        if (!email || !name || !chosen.length || chosen.some(x=>!(x in allowed))) return send(res,400,{error:'Informe nome, e-mail e serviços válidos.'});
+        value = chosen.reduce((sum,x)=>sum+allowed[x],0);
+        description = 'Black Hands - '+chosen.join(' + ');
+        reference = 'bhbooking-'+Date.now();
+      }
       const customerBody = {name,email,notificationDisabled:true,externalReference:'blackhands-'+Date.now()};
       if (phone.length >= 10) customerBody.mobilePhone = phone;
       const customer = await asaas('/customers','POST',customerBody);
       const today = new Date();
       const dueDate = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
       const payment = await asaas('/payments','POST',{
-        customer:customer.id,billingType:'PIX',value,dueDate,
-        description:'Black Hands Club - '+(plan==='combo_01'?'Combo 01':'Combo 02')+' - primeiro mês',
-        externalReference:'bhclub-'+plan+'-'+Date.now()
+        customer:customer.id,billingType:'PIX',value,dueDate,description,externalReference:reference
       });
       const qr = await asaas('/payments/'+encodeURIComponent(payment.id)+'/pixQrCode');
-      return send(res,200,{paymentId:payment.id,value,plan,encodedImage:qr.encodedImage,payload:qr.payload,expirationDate:qr.expirationDate,invoiceUrl:payment.invoiceUrl||null,environment:ASAAS_BASE_URL.includes('sandbox')?'sandbox':'production'});
+      return send(res,200,{paymentId:payment.id,value,kind,encodedImage:qr.encodedImage,payload:qr.payload,expirationDate:qr.expirationDate,invoiceUrl:payment.invoiceUrl||null,environment:ASAAS_BASE_URL.includes('sandbox')?'sandbox':'production'});
     } catch (error) {
       return send(res,error.status && error.status < 500 ? 400 : 500,{error:error.message || 'Não foi possível gerar o Pix.'});
     }
@@ -62,8 +73,8 @@ async function api(req,res,url) {
     try {
       const id = decodeURIComponent(url.pathname.slice('/api/payments/'.length,-'/status'.length));
       if (!id || id.includes('/')) return send(res,400,{error:'ID de pagamento inválido.'});
-      const payment = await asaas('/payments/'+encodeURIComponent(id));
-      return send(res,200,{id:payment.id,status:payment.status,paid:['RECEIVED','CONFIRMED','RECEIVED_IN_CASH'].includes(payment.status)});
+      const payment = await asaas('/payments/'+encodeURIComponent(id)+'/status');
+      return send(res,200,{id,status:payment.status,paid:['RECEIVED','CONFIRMED','RECEIVED_IN_CASH'].includes(payment.status)});
     } catch (error) {
       return send(res,error.status && error.status < 500 ? 400 : 500,{error:error.message || 'Não foi possível consultar o pagamento.'});
     }
